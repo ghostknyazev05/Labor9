@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,9 +15,25 @@ namespace Section
     {
         private static readonly Random _random = new Random();
 
-        public static double GenerateDouble(double minValue, double maxValue)
+        /// <summary>
+        /// Генерирует два случайных числа, гарантируя, что первое всегда будет меньше второго.
+        /// </summary>
+        public static (double x, double y) GenerateDouble(double minValue, double maxValue)
         {
-            return _random.NextDouble() * (maxValue - minValue) + minValue;
+            // Генерация двух случайных чисел
+            double x = _random.NextDouble() * (maxValue - minValue) + minValue;
+            double y = _random.NextDouble() * (maxValue - minValue) + minValue;
+
+            // Убедимся, что x всегда меньше y
+            if (x > y)
+            {
+                // Если x больше, меняем их местами
+                double temp = x;
+                x = y;
+                y = temp;
+            }
+
+            return (x, y);  // Возвращаем кортеж с двумя значениями
         }
     }
 }
