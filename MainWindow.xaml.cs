@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,10 +29,14 @@ namespace Section
 
         private void GenerateRandomSegment(object sender, RoutedEventArgs e)
         {
-            double x = RandomGenerator.GenerateDouble(-10, 10);
-            double y = RandomGenerator.GenerateDouble(-10, 10);
+            // Генерация двух чисел, где первое всегда меньше второго
+            (double x, double y) = RandomGenerator.GenerateDouble(-10, 10);
+
+            // Создаем новый отрезок
             _segment = new LineSegment(x, y);
             UpdateSegmentInfo();
+
+            // Отображаем значения в текстовых полях
             XBox.Text = x.ToString("F2");
             YBox.Text = y.ToString("F2");
         }
