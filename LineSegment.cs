@@ -97,9 +97,9 @@ namespace Section
         /// <summary>
         /// Переопределение метода ToString().
         /// </summary>
-        public override string ToString()
-        {
-            return $"Отрезок: [{_x:F3}, {_y:F3}]";
-        }
+         public override string ToString()
+         {
+             return $"Отрезок: [{_x:F3}".Replace(',', ';') + $" ; {_y:F3}".Replace(',', ';') + "]";
+         }
     }
 }
