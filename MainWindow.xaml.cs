@@ -10,140 +10,261 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 using System;
+using System.Windows;
 
 namespace Section
 {
     /// <summary>
-    /// Главное окно приложения для работы с отрезком.
-    /// Позволяет создавать отрезок вручную или случайно, выполнять различные операции над отрезком
-    /// (вычисление длины, инкремент, преобразование типов, добавление значения, проверка принадлежности точки).
+    /// Основное окно приложения, которое позволяет работать с отрезком.
     /// </summary>
     public partial class MainWindow : Window
     {
-        private LineSegment _segment;
+        private LineSegment currentSegment;
 
         public MainWindow()
         {
             InitializeComponent();
         }
 
-        private void GenerateRandomSegment(object sender, RoutedEventArgs e)
-        {
-            // Генерация двух чисел, где первое всегда меньше второго
-            (double x, double y) = RandomGenerator.GenerateDouble(-10, 10);
-
-            // Создаем новый отрезок
-            _segment = new LineSegment(x, y);
-            UpdateSegmentInfo();
-
-            // Отображаем значения в текстовых полях
-            XBox.Text = x.ToString("F2");
-            YBox.Text = y.ToString("F2");
-        }
-
+        /// <summary>
+        /// Создаёт новый отрезок на основе введённых значений.
+        /// </summary>
         private void CreateSegment(object sender, RoutedEventArgs e)
         {
-            if (InputValidator.IsValidDouble(XBox.Text, out double x) &&
-                InputValidator.IsValidDouble(YBox.Text, out double y))
+            try
             {
-                _segment = new LineSegment(x, y);
-                UpdateSegmentInfo();
-            }
-            else
-            {
-                MessageBox.Show("Введите корректные значения X и Y!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
-
-        private void CalculateLength(object sender, RoutedEventArgs e)
-        {
-            if (_segment == null)
-            {
-                MessageBox.Show("Отрезок не создан!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            double length = !_segment;
-            MessageBox.Show($"Длина отрезка: {length:F3}", "Результат");
-        }
-
-        private void IncrementSegment(object sender, RoutedEventArgs e)
-        {
-            if (_segment == null)
-            {
-                MessageBox.Show("Отрезок не создан!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            _segment++;
-            UpdateSegmentInfo();
-        }
-
-        private void CastToInt(object sender, RoutedEventArgs e)
-        {
-            if (_segment == null)
-            {
-                MessageBox.Show("Отрезок не создан!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            int xValue = (int)_segment;
-            MessageBox.Show($"X в int: {xValue}", "Результат");
-        }
-
-        private void CastToDouble(object sender, RoutedEventArgs e)
-        {
-            if (_segment == null)
-            {
-                MessageBox.Show("Отрезок не создан!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            double yValue = _segment;
-            MessageBox.Show($"Y в double: {yValue:F3}", "Результат");
-        }
-
-        private void AddValue(object sender, RoutedEventArgs e)
-        {
-            if (_segment == null)
-            {
-                MessageBox.Show("Отрезок не создан!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (InputValidator.IsValidDouble(AddValueBox.Text, out double value))
-            {
-                _segment = _segment + (int)value;
-                UpdateSegmentInfo();
-            }
-            else
-            {
-                MessageBox.Show("Введите корректное число!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
-
-        private void CheckPoint(object sender, RoutedEventArgs e)
-        {
-            if (_segment == null)
-            {
-                MessageBox.Show("Отрезок не создан!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (InputValidator.IsValidDouble(CheckPointBox.Text, out double point))
-            {
-                if (_segment.Contains(point))
+                if (double.TryParse(XBox.Text, out double x) && double.TryParse(YBox.Text, out double y))
                 {
-                    MessageBox.Show("Точка принадлежит отрезку.", "Результат");
+                    currentSegment = new LineSegment(x, y);
+                    SegmentInfo.Text = currentSegment.ToString();
+                    MessageBox.Show("Отрезок успешно создан.");
                 }
                 else
                 {
-                    MessageBox.Show("Точка НЕ принадлежит отрезку.", "Результат");
+                    throw new FormatException("Введите корректные значения для X и Y.");
                 }
             }
-            else
+            catch (FormatException ex)
             {
-                MessageBox.Show("Введите корректное число!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Неизвестная ошибка: {ex.Message}");
             }
         }
 
-        private void UpdateSegmentInfo()
+        /// <summary>
+        /// Генерирует случайный отрезок.
+        /// </summary>
+        private void GenerateRandomSegment(object sender, RoutedEventArgs e)
         {
-            SegmentInfo.Text = _segment.ToString();
+            try
+            {
+                Random rnd = new Random();
+                double x = Math.Round(rnd.NextDouble() * 100, 3);
+                double y = Math.Round(x + rnd.NextDouble() * 100, 3);
+
+                currentSegment = new LineSegment(x, y);
+                XBox.Text = x.ToString("F3");
+                YBox.Text = y.ToString("F3");
+                SegmentInfo.Text = currentSegment.ToString();
+
+                MessageBox.Show("Случайный отрезок сгенерирован.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при генерации случайного отрезка: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Вычисляет и отображает длину отрезка.
+        /// </summary>
+        private void CalculateLength(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (currentSegment != null)
+                {
+                    double length = !currentSegment;
+                    MessageBox.Show($"Длина отрезка: {length:F3}");
+                }
+                else
+                {
+                    throw new InvalidOperationException("Сначала создайте отрезок.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Увеличивает отрезок на 1.
+        /// </summary>
+        private void AddOneToSegment(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (currentSegment != null)
+                {
+                    currentSegment++;
+                    SegmentInfo.Text = currentSegment.ToString();
+                    MessageBox.Show("К отрезку прибавлено 1.");
+                }
+                else
+                {
+                    throw new InvalidOperationException("Сначала создайте отрезок.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Преобразует значение X в тип int и отображает результат.
+        /// </summary>
+        private void CastToInt(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (double.TryParse(XBox.Text, out double value))
+                {
+                    int intValue = (int)value;
+                    XBox.Text = intValue.ToString();
+                    MessageBox.Show("Значение X преобразовано в int.");
+                }
+                else
+                {
+                    throw new FormatException("Введите корректное число для X.");
+                }
+            }
+            catch (FormatException ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Преобразует значение Y в тип double с округлением до 3 знаков после запятой.
+        /// </summary>
+        private void CastToDouble(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string input = YBox.Text;
+
+                if (double.TryParse(input, out double result))
+                {
+                    result = Math.Round(result, 3);
+                    YBox.Text = result.ToString("F3");
+                    MessageBox.Show("Значение Y преобразовано в double с 3 знаками после запятой.");
+                }
+                else
+                {
+                    throw new FormatException("Введите корректное число для Y.");
+                }
+            }
+            catch (FormatException ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Добавляет указанное значение к отрезку, с проверкой на превышение допустимых значений.
+        /// </summary>
+        private void AddValue(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (currentSegment == null)
+                {
+                    throw new InvalidOperationException("Сначала создайте отрезок.");
+                }
+
+                if (!double.TryParse(AddValueBox.Text, out double value))
+                {
+                    throw new FormatException("Введите корректное число для добавления.");
+                }
+
+                double newX = currentSegment.X + value;
+                double newY = currentSegment.Y + value;
+
+                if (Math.Abs(newX) > 10_000_000_000 || Math.Abs(newY) > 10_000_000_000)
+                {
+                    throw new InvalidOperationException("Результат выходит за пределы ±10 млрд. Операция отменена.");
+                }
+
+                currentSegment = new LineSegment(newX, newY);
+                SegmentInfo.Text = currentSegment.ToString();
+                MessageBox.Show($"К отрезку добавлено значение {value}.");
+            }
+            catch (FormatException ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Проверяет, принадлежит ли точка отрезку.
+        /// </summary>
+        private void CheckPoint(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (currentSegment == null)
+                {
+                    throw new InvalidOperationException("Сначала создайте отрезок.");
+                }
+
+                if (double.TryParse(CheckPointBox.Text, out double point))
+                {
+                    bool result = currentSegment.Contains(point);
+                    string message = result ? "Точка принадлежит отрезку." : "Точка не принадлежит отрезку.";
+                    MessageBox.Show(message);
+                }
+                else
+                {
+                    throw new FormatException("Введите корректную точку.");
+                }
+            }
+            catch (FormatException ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
         }
     }
 }
