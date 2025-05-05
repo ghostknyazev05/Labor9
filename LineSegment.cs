@@ -154,7 +154,7 @@ namespace Section
         /// <returns>Строка, представляющая отрезок</returns>
         public override string ToString()
         {
-            return $"Отрезок: [{_x:F3}".Replace(',', ';') + $" ; {_y:F3}".Replace(',', ';') + "]";
+            return $"Отрезок: [{_x.ToString("F2", new System.Globalization.CultureInfo("ru-RU"))} ; {_y.ToString("F2", new System.Globalization.CultureInfo("ru-RU"))}]";
         }
     }
 }
