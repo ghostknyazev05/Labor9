@@ -1,24 +1,19 @@
-using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-
 using System;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Section
 {
     /// <summary>
-    /// Основное окно приложения, которое позволяет работать с отрезком.
+    /// Основное окно приложения для работы с числовыми отрезками.
+    /// Максимальное значение координаты — ±10 миллиардов.
+    /// Формат ввода: до 10 цифр до запятой и до 3 знаков после.
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const double MAX_VALUE = 10_000_000_000;
         private LineSegment currentSegment;
 
         public MainWindow()
@@ -26,245 +21,178 @@ namespace Section
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Создаёт новый отрезок на основе введённых значений.
-        /// </summary>
+        private double? TryParseValidNumber(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return null;
+
+            string pattern = @"^-?\d{1,10}([,.]\d{1,3})?$";
+            if (!Regex.IsMatch(input, pattern))
+                return null;
+
+            string normalized = input.Replace(',', '.');
+
+            if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                return null;
+
+            if (Math.Abs(value) > MAX_VALUE)
+                return null;
+
+            return value;
+        }
+
+        private void NumberBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            var textBox = sender as System.Windows.Controls.TextBox;
+            string currentText = textBox.Text.Insert(textBox.SelectionStart, e.Text);
+            e.Handled = !Regex.IsMatch(currentText, @"^-?\d{0,10}([,.]\d{0,3})?$");
+        }
+
         private void CreateSegment(object sender, RoutedEventArgs e)
         {
-            try
+            double? x = TryParseValidNumber(XBox.Text);
+            double? y = TryParseValidNumber(YBox.Text);
+
+            if (x == null || y == null)
             {
-                if (double.TryParse(XBox.Text, out double x) && double.TryParse(YBox.Text, out double y))
-                {
-                    currentSegment = new LineSegment(x, y);
-                    SegmentInfo.Text = currentSegment.ToString();
-                    MessageBox.Show("Отрезок успешно создан.");
-                }
-                else
-                {
-                    throw new FormatException("Введите корректные значения для X и Y.");
-                }
+                MessageBox.Show("Введите корректные значения для X и Y:\n— до 10 цифр до запятой\n— до 3 после\n— диапазон ±10 млрд.");
+                return;
             }
-            catch (FormatException ex)
+
+            if (x == y)
             {
-                MessageBox.Show(ex.Message);
+                currentSegment = null;
+                SegmentInfo.Text = "Отрезок: нет";
+                MessageBox.Show("X и Y не могут быть равны. Отрезок сброшен.");
+                return;
             }
-            catch (ArgumentException ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Неизвестная ошибка: {ex.Message}");
-            }
+
+            currentSegment = new LineSegment(x.Value, y.Value);
+            SegmentInfo.Text = currentSegment.ToString();
+            MessageBox.Show("Отрезок успешно создан.");
         }
 
-        /// <summary>
-        /// Генерирует случайный отрезок.
-        /// </summary>
         private void GenerateRandomSegment(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                Random rnd = new Random();
-                double x = Math.Round(rnd.NextDouble() * 100, 3);
-                double y = Math.Round(x + rnd.NextDouble() * 100, 3);
+            Random rnd = new Random();
+            double x = Math.Round(rnd.NextDouble() * 100, 3);
+            double y = Math.Round(x + rnd.NextDouble() * 100, 3);
 
-                currentSegment = new LineSegment(x, y);
-                XBox.Text = x.ToString("F3");
-                YBox.Text = y.ToString("F3");
-                SegmentInfo.Text = currentSegment.ToString();
+            currentSegment = new LineSegment(x, y);
+            XBox.Text = x.ToString("F3", CultureInfo.InvariantCulture);
+            YBox.Text = y.ToString("F3", CultureInfo.InvariantCulture);
+            SegmentInfo.Text = currentSegment.ToString();
 
-                MessageBox.Show("Случайный отрезок сгенерирован.");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при генерации случайного отрезка: {ex.Message}");
-            }
+            MessageBox.Show("Случайный отрезок сгенерирован.");
         }
 
-        /// <summary>
-        /// Вычисляет и отображает длину отрезка.
-        /// </summary>
         private void CalculateLength(object sender, RoutedEventArgs e)
         {
-            try
+            if (currentSegment == null)
             {
-                if (currentSegment != null)
-                {
-                    double length = !currentSegment;
-                    MessageBox.Show($"Длина отрезка: {length:F3}");
-                }
-                else
-                {
-                    throw new InvalidOperationException("Сначала создайте отрезок.");
-                }
+                MessageBox.Show("Сначала создайте отрезок.");
+                return;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
+
+            double length = !currentSegment;
+            MessageBox.Show($"Длина отрезка: {length:F3}");
         }
 
-        /// <summary>
-        /// Увеличивает отрезок на 1.
-        /// </summary>
         private void AddOneToSegment(object sender, RoutedEventArgs e)
         {
-            try
+            if (currentSegment == null)
             {
-                if (currentSegment != null)
-                {
-                    currentSegment++;
-                    SegmentInfo.Text = currentSegment.ToString();
-                    MessageBox.Show("К отрезку прибавлено 1.");
-                }
-                else
-                {
-                    throw new InvalidOperationException("Сначала создайте отрезок.");
-                }
+                MessageBox.Show("Сначала создайте отрезок.");
+                return;
             }
-            catch (Exception ex)
+
+            double newX = currentSegment.X + 1;
+            double newY = currentSegment.Y + 1;
+
+            if (Math.Abs(newX) > MAX_VALUE || Math.Abs(newY) > MAX_VALUE)
             {
-                MessageBox.Show($"Ошибка: {ex.Message}");
+                MessageBox.Show("Прибавление 1 приведёт к выходу за пределы ±10 млрд.");
+                return;
             }
+
+            currentSegment++;
+            SegmentInfo.Text = currentSegment.ToString();
+            MessageBox.Show("К отрезку прибавлено 1.");
         }
 
-        /// <summary>
-        /// Преобразует значение X в тип int и отображает результат.
-        /// </summary>
         private void CastToInt(object sender, RoutedEventArgs e)
         {
-            try
+            if (TryParseValidNumber(XBox.Text) is double value)
             {
-                if (double.TryParse(XBox.Text, out double value))
-                {
-                    int intValue = (int)value;
-                    XBox.Text = intValue.ToString();
-                    MessageBox.Show("Значение X преобразовано в int.");
-                }
-                else
-                {
-                    throw new FormatException("Введите корректное число для X.");
-                }
+                XBox.Text = ((int)value).ToString();
+                MessageBox.Show("Значение X преобразовано в int.");
             }
-            catch (FormatException ex)
+            else
             {
-                MessageBox.Show(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
+                MessageBox.Show("Введите корректное число для X.");
             }
         }
 
-        /// <summary>
-        /// Преобразует значение Y в тип double с округлением до 3 знаков после запятой.
-        /// </summary>
         private void CastToDouble(object sender, RoutedEventArgs e)
         {
-            try
+            if (TryParseValidNumber(YBox.Text) is double result)
             {
-                string input = YBox.Text;
-
-                if (double.TryParse(input, out double result))
-                {
-                    result = Math.Round(result, 3);
-                    YBox.Text = result.ToString("F3");
-                    MessageBox.Show("Значение Y преобразовано в double с 3 знаками после запятой.");
-                }
-                else
-                {
-                    throw new FormatException("Введите корректное число для Y.");
-                }
+                YBox.Text = result.ToString("F3", CultureInfo.InvariantCulture);
+                MessageBox.Show("Значение Y преобразовано в double с 3 знаками после запятой.");
             }
-            catch (FormatException ex)
+            else
             {
-                MessageBox.Show(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
+                MessageBox.Show("Введите корректное число для Y.");
             }
         }
 
-        /// <summary>
-        /// Добавляет указанное значение к отрезку, с проверкой на превышение допустимых значений.
-        /// </summary>
         private void AddValue(object sender, RoutedEventArgs e)
         {
-            try
+            if (currentSegment == null)
             {
-                if (currentSegment == null)
-                {
-                    throw new InvalidOperationException("Сначала создайте отрезок.");
-                }
-
-                if (!double.TryParse(AddValueBox.Text, out double value))
-                {
-                    throw new FormatException("Введите корректное число для добавления.");
-                }
-
-                double newX = currentSegment.X + value;
-                double newY = currentSegment.Y + value;
-
-                if (Math.Abs(newX) > 10_000_000_000 || Math.Abs(newY) > 10_000_000_000)
-                {
-                    throw new InvalidOperationException("Результат выходит за пределы ±10 млрд. Операция отменена.");
-                }
-
-                currentSegment = new LineSegment(newX, newY);
-                SegmentInfo.Text = currentSegment.ToString();
-                MessageBox.Show($"К отрезку добавлено значение {value}.");
+                MessageBox.Show("Сначала создайте отрезок.");
+                return;
             }
-            catch (FormatException ex)
+
+            double? value = TryParseValidNumber(AddValueBox.Text);
+            if (value == null)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Введите число в пределах ±10 млрд (до 10 цифр до запятой, до 3 после).");
+                return;
             }
-            catch (InvalidOperationException ex)
+
+            double newX = currentSegment.X + value.Value;
+            double newY = currentSegment.Y + value.Value;
+
+            if (Math.Abs(newX) > MAX_VALUE || Math.Abs(newY) > MAX_VALUE)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Результат выходит за пределы ±10 млрд. Операция отменена.");
+                return;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
+
+            currentSegment = new LineSegment(newX, newY);
+            SegmentInfo.Text = currentSegment.ToString();
+            MessageBox.Show($"К отрезку добавлено значение {value.Value:F3}.");
         }
 
-        /// <summary>
-        /// Проверяет, принадлежит ли точка отрезку.
-        /// </summary>
         private void CheckPoint(object sender, RoutedEventArgs e)
         {
-            try
+            if (currentSegment == null)
             {
-                if (currentSegment == null)
-                {
-                    throw new InvalidOperationException("Сначала создайте отрезок.");
-                }
+                MessageBox.Show("Сначала создайте отрезок.");
+                return;
+            }
 
-                if (double.TryParse(CheckPointBox.Text, out double point))
-                {
-                    bool result = currentSegment.Contains(point);
-                    string message = result ? "Точка принадлежит отрезку." : "Точка не принадлежит отрезку.";
-                    MessageBox.Show(message);
-                }
-                else
-                {
-                    throw new FormatException("Введите корректную точку.");
-                }
-            }
-            catch (FormatException ex)
+            double? point = TryParseValidNumber(CheckPointBox.Text);
+            if (point == null)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Введите корректную точку (до 3 знаков после запятой, в диапазоне ±10 млрд).");
+                return;
             }
-            catch (InvalidOperationException ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
+
+            bool result = currentSegment.Contains(point.Value);
+            string message = result ? "Точка принадлежит отрезку." : "Точка не принадлежит отрезку.";
+            MessageBox.Show(message);
         }
     }
 }
